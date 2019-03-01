@@ -1,5 +1,3 @@
----
-
 ### ![](https://cdn4.iconfinder.com/data/icons/feather/24/code-24.png) Summary
 
 This project was created as part of a presentation. 
