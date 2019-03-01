@@ -8,9 +8,7 @@ I wanted to create something special, so I thought that an interactive map with 
 
 Recently, I have been trying out d3, a javascript data visualization library, which can lead to the creation of really exceptional data visualizations.  I found working with it quite enjoyable, thanks to the variety of examples available and the guidance provided by its creator, Mike Bostock.
 
-This software was created as part of a presentation of CO<sub>2</sub> emission levels per point of reference. Firstly, the choropleth map[^footnote] is created, by using the average value of emissions per country or state. Afterwards, the pie charts, showing the different emission indexes, are created on specific coordinates, which correspond to the location of each point. The user can change the selected month with a simple click of a button.
-
-[^footnote]:  Choropleth map is a thematic map, in which areas are shaded or patterned in proportion to the measurement of the statistical variable being displayed on the map, such as population density or per-capita income.
+This software was created as part of a presentation of CO<sub>2</sub> emission levels per point of reference. Firstly, the choropleth map<sup id="return1">[1](#footnote1)</sup> is created, by using the average value of emissions per country or state. Afterwards, the pie charts, showing the different emission indexes, are created on specific coordinates, which correspond to the location of each point. The user can change the selected month with a simple click of a button.
 
 -------------
 
@@ -69,3 +67,8 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 ### ![](https://cdn4.iconfinder.com/data/icons/developer-set-3/128/edit2-24.png) Authors 
 
 *Dimitrios Petkidis*  -  [dpetkidis](https://github.com/dpetkidis)
+
+----------
+
+
+<a name="footnote1">1</a>: Choropleth map is a thematic map, in which areas are shaded or patterned in proportion to the measurement of the statistical variable being displayed on the map, such as population density or per-capita income. [↩](#return1)
