@@ -58,9 +58,9 @@ A short list of the d3 functions used is presented below. In the table section â
 
 ### Further notes
 
-The csv files and the json files can be modified according to your needs. You can modify the map borders, change the variable names and add more values. 
-The colors and the legend can also be modified to serve different purposes.
-The website can be modified to be more responsive
+- The csv files and the json files can be modified according to your needs. You can modify the map borders, change the variable names and add more values. 
+- The colors and the legend can also be modified to serve different purposes.
+- The website can be modified to be more responsive
 
 ----------
 
