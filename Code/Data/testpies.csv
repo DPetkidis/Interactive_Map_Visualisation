@@ -1,0 +1,17 @@
+month,plant,country,PlantLatitude,PlantLongitude,value
+June,Miami(Florida),United States,25.758584,-80.379741,0.9638-0.0362
+June,Lawrence(Kansas),United States,38.950057,-95.265693,0.2964-0.7136
+June,Salem(Oregon),United States,44.94342,-123.035419,0.7243-0.2757
+June,Eloy(Arizona),United States,32.75428,-111.55414,0.6384-0.3716
+June,Roanoke(Virginia),United States,37.271569,-79.941065,0.4235-0.5765
+July,Lawrence(Kansas),United States,38.950057,-95.265693,0.5912-0.4188
+July,Salem(Oregon),United States,44.94342,-123.035419,0.7243-0.2757
+July,Eloy(Arizona),United States,32.75428,-111.55414,0.6384-0.3716
+July,Roanoke(Virginia),United States,37.271569,-79.941065,0.7838-0.2162
+July,Miami(Florida),United States,25.758584,-80.379741,0.8734-0.1266
+June,Patras,Greece,38.246739,21.73415,0.9638-0.0362
+June,Eleysina,Greece,38.041201,23.542157,0.4235-0.5765
+June,Thessaloniki,Greece,40.627181,22.947915,0.6672-0.3328
+July,Patras,Greece,38.246739,21.73415,0.7838-0.2162
+July,Eleysina,Greece,38.041201,23.542157,0.6672-0.3328
+July,Thessaloniki,Greece,40.627181,22.947915,0.4235-0.5765
