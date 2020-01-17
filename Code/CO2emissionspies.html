@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CO2 emissions world</title>
+
+<a href="https://github.com/DPetkidis" target="_blank">
+<img src="Github_logo.jpg" alt="Github logo" style="margin-left: 600px; width:300px; height:150px;">
+</a>
+
+<script type="text/javascript" src="d3.js"></script>
+<style type="text/css">
+/*tooltip styling (decided not to be used here)*/
+div.tooltip {
+	position: absolute;
+	text-align: center;
+	width: 200px;
+	height: 40px;
+	padding: 5px;
+	font-size: 14px;
+	margin: 5px;
+	background: lightsteelblue;
+	border: 2px;
+	border-style: solid;
+	border-color: #000080;
+	border-radius: 8px;
+	pointer-events: none;
+}
+
+.background {
+	fill: none;
+	pointer-events: all;
+}
+
+/*header and paragraph styling*/
+h1 {
+	font-family: verdana;
+	font-size: 150%;
+	color: navy;
+}
+
+p {
+    display: block;
+    margin-top: 7.5px;
+    margin-bottom: 5px;
+    margin-left: 200px;
+    margin-right: 0;
+    font-family: "helvectia";
+    font-size: 16px;
+}
+
+p1 {
+	display: inline;
+	margin-left: 200px;
+	font-family:"helvetica";
+	font-size: 15px;
+}
+
+/*select list styling*/
+Select {
+	border: 1px solid #ccc;
+    width: 100px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: #fafafa;
+    padding: 4px 6px;
+   -webkit-appearance: button;
+   -webkit-border-radius: 2px;
+   -webkit-box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+   -webkit-padding-end: 20px;
+   -webkit-padding-start: 2px;
+   -webkit-user-select: none;
+}
+
+/*button styling*/
+.button {
+    background-color: white; 
+    color: black; 
+    border: 2px solid #003366;
+    padding: 5px 10px;
+    text-align: center;
+    text-decoration: none;
+    display: inline;
+    font-size: 16px;
+    margin: 4px 2px;
+    -webkit-transition-duration: 0.4s; /* Safari */
+    transition-duration: 0.4s;
+    cursor: pointer;
+    transition-duration: .75s;
+}
+
+.button:hover {
+    background-color: #003366;
+    color: white;
+    transition-duration: .75s;
+}
+
+</style>
+</head>
+<body>
+
+	<h1 align="center">CO2 plant emissions map</h1>
+	<p1 align="right">Click on a country for more information
+	<span style="float:right">For the United States, click <button class="button" style="vertical-align:middle" onclick="window.location.href='http://localhost:8000/USpietest.html'"><span>Here </span>
+	</button>
+	</span>	
+	</p1>
+	<p align="left">Select month :
+	
+	<select id="Selectmonth" onchange="monthreset()">
+	  <option value="January">January</option>
+	  <option value="February">February</option>
+	  <option value="March">March</option>
+	  <option value="April">April</option>
+	  <option value="May">May</option>
+	  <option selected value="June">June</option>
+	  <option value="July">July</option>
+	  <option value="August">August</option>
+	  <option value="September">September</option>
+	  <option value="October">October</option>
+	  <option value="November">November</option>
+	  <option value="December">December</option>
+	</select>
+	</p>
+	
+	<script type="text/javascript">
+	
+	function month() {
+	    var id = document.getElementById("Selectmonth");
+	    var month = id.options[id.selectedIndex].text;
+	return month;
+	};
+		
+	//initialization of width,height,radius,etc
+	var w = 1300;
+	var h = 800;
+	var active = d3.select(null);	
+	var radius = 1;
+	
+	//define div for tooltip
+	var div = d3.select("body").append("div")   
+		.attr("class", "tooltip")               
+		.style("opacity", 0); //opacity = 0 in order for tooltip to be hidden
+		
+	//Define map projection (geoMercator for global flat projection)
+	var projection = d3.geoMercator()
+		.translate([w/2 , h/1.5])
+		.scale([175]);
+
+	//path the projection defined above
+	var path = d3.geoPath()
+		.projection(projection);
+					 
+	//Define quantize scale to sort data values into buckets of color
+	//Quantize automatically decides the colors based on it's range output
+	var color = d3.scaleQuantize()
+		.range(["#f2f0f7", "#dadaeb", "#9e9ac8", "#756bb1", "#54278f"]);
+
+	//introduce a "blackbox" in the svg
+	var svg = d3.select("body")
+		.append("svg")
+		.attr("width", w)
+		.attr("height", h);
+	
+	//create svg groups
+	var g = svg.append("g") //background
+		.style("stroke-width", "1.5px");
+	var g2 = svg.append("g"); // pie charts
+	
+	//create the arcs for the pie charts
+	var arc = d3.arc()
+	.innerRadius(0)
+	.outerRadius(radius);
+	
+	//create the pie charts
+	var pie = d3.pie()
+	.sort(null)
+	.value(function(d) { return d; });
+	
+	//pie cart color scale
+	var piecolor = d3.scaleOrdinal(["#7CFC00", "#FFD700"]);
+		
+	//load the excel dataset of emissions
+	//note that only the column of the csv named average is used to determine the color
+	//we can change the column used based on the KPI or the value we want to emphasize
+	//the basic difference with the US map is that this choropleth colours 
+	//each country based on the average value per month of all the plants located there
+	d3.csv("test.csv" + '?' + Math.floor(Math.random()*1000), function(data) {
+
+		//Set input domain for color scale
+		color.domain([
+			d3.min(data, function(d) { return d.average; }), 
+			d3.max(data, function(d) { return d.average; })
+		]);
+		
+		
+		//load the geojson file of countries in order to create the map
+		d3.json("worldmap.json", function(json) {
+
+			//Merge the emission dataset and GeoJSON
+			
+			//Loop through once for each emission dataset value
+			for (var i = 0; i < data.length; i++) {
+				
+				//console.log(month()); check if month is selected properly
+				
+				if(month() == data[i].month) {
+					
+					//Grab country name
+					var datacountry = data[i].country;
+					
+					//Grab data value, and convert from string to float
+					var dataValue = parseFloat(data[i].value);
+					var dataAverage = parseFloat(data[i].average);
+			
+					//Find the corresponding country inside the GeoJSON
+					for (var j = 0; j < json.features.length; j++) {
+					
+						var jsoncountry = json.features[j].properties.name;
+						
+						if (datacountry == jsoncountry) {
+					
+							//Copy the data value into the JSON
+							json.features[j].properties.value = dataValue;
+							//A single value represents a single plant facility. A country can have multiple plants.
+							//That's why here we implement the average value for the country.
+							json.features[j].properties.average = dataAverage;
+							
+							//Stop looking through the JSON
+							break;
+						} //end if
+						
+					} //end for loop
+					
+				} //end if
+
+			} //end for loop		
+					
+			//Bind data and create one path per GeoJSON feature
+			g.selectAll("path")
+			   .data(json.features)
+			   .enter()
+			   .append("path")
+			   .attr("d", path)
+			   .attr("class", "feature")
+			   .style("stroke", "DimGrey") //country border color and width
+			   .style("stroke-width", 0.15)
+			   .style("fill", function(d) { //choropleth filling					
+					var value = d.properties.value; //get data value
+					var average = d.properties.average; //get the average value from data					
+					//since we ave created a separate file for the US we don't need to color them
+					//we created a separate file because we had trouble zooming in (because of Alaska,Hawaii,etc.)
+					if(d.properties.name == "United States") { 
+						return "#ccc";
+					}else{
+						if (average) {
+							//If average value exists…
+							return color(average);
+						} else {
+							//If average value is undefined…
+							return "#ccc";
+						}
+					}
+				})
+			   .style("opacity", 0.8) //opacity 0.8 setup for the hovering effect
+			   .on("mouseover", function(d) {
+				d3.select(this)
+					.transition()
+					.duration(300)
+					.style("opacity", 1); //opacity 1 when hovering on top of a state
+				})
+				.on("mouseout", function() {
+				d3.select(this)
+					.transition()
+					.duration(300)
+					.style("opacity", 0.8) //opacity back to 0.8 when mouse stops targeting the specific state
+					
+				div.transition() //hiding the on-state tooltip on mouseout (not used here)
+					.duration(300)
+					.style("opacity", 0)
+				})
+				.on("click", function clicked(d) { //when a state is clicked the map is zoomed and the pie charts are enhanced
+				  if (active.node() === this) return reset(); //if the state is allready selected then unzoom
+				  active.classed("active", false);
+				  active = d3.select(this).classed("active", true);
+	
+				  var del = d3.selectAll(".pies") //delete all allready existing pies
+				  del = del.remove();
+	
+				  var bounds = path.bounds(d), //set the bounds for scale and translate
+					dx = bounds[1][0] - bounds[0][0],
+					dy = bounds[1][1] - bounds[0][1],
+					x = (bounds[0][0] + bounds[1][0]) / 2,
+					y = (bounds[0][1] + bounds[1][1]) / 2,
+					scale = .9 / Math.max(dx / w, dy / h),
+					translate = [w / 2 - scale * x, h / 2 - scale * y];
+	
+					g.transition() //transition the "path"-map group (zoom in)
+						.duration(750)
+						.style("stroke-width", 1.5 / scale + "px")
+						.attr("transform", "translate(" + translate + ")scale(" + scale + ")");
+					
+					//load the appropriate csv file in order to create the pie charts again
+					d3.csv("testpies.csv" + '?' + Math.floor(Math.random()*1000), function(data) {
+						
+						//create the pies inside g2
+						var points = g2.selectAll("g")
+						.data(data)
+						.enter()
+						.append("g")
+						.attr("transform",function(d) {
+							if(d.country != "United States") {
+								if(d.month == month()){  //check if the month is the selected one
+									d.PlantLongitude = parseFloat(d.PlantLongitude); //parsing into float from string is nescessary
+									d.PlantLatitude = parseFloat(d.PlantLatitude);
+									return "translate("+projection([d.PlantLongitude,d.PlantLatitude])+")" //project the pie on the right coordinates of the map
+								}
+							}							
+						})
+						.attr("class","pies")
+						
+						//create the text above the pie chart (with the plant name)
+						points.append("text")
+							.attr("y", -radius - 0.5)
+							.text(function(d) { return d.plant }) //return the plant name
+							.style('text-anchor','middle')
+							.attr("font-size", "1px")
+							.style("opacity", 0); //opacity 0 since we want it to transit slowly
+						
+						//create the arcs for each value of the pie chart
+						var pies = points.selectAll(".pies")
+							.data(function(d) { return pie(d.value.split(['-'])); }) //split values on -
+							.enter()
+							.append('g')
+							.attr('class','arc');
+						
+						//create the pie chart path	
+						pies.append("path")
+						  .attr('d',arc)
+					      .attr("fill",function(d,i){ //color the specific area of the piechart according to the scale set
+					           return piecolor(i);     
+					      })
+					      .style("opacity", 0); //at first opacity 0 because we want it to transit
+					      
+					    //text labels inside the pie arcs
+						pies.append("text")
+					      .attr("transform", function(d) { 
+					    	  var _d = arc.centroid(d);
+					          _d[0] *= 1.1;	//multiply by a constant factor
+					          _d[1] *= 1.1;	//multiply by a constant factor
+					          return "translate(" + _d + ")";
+					          //return "translate(" + arc.centroid(d) + ")"; 
+					     })
+					     .attr("dy", "0.35em")
+					     .text(function(d) {
+					    	  if(d.value < 0.1){ //if the value is less than 0.1 don't set a label
+					    		  return " ";
+					    	  }else{
+					    		  d.value = d3.format(".1%")(d.value); //format the label into a single decimal digit % number						    		 
+					    		  return d.value;
+					    	  }
+					      })
+					     .attr("font-size", "0.4px");
+						
+						//select all the pies and transit them to opacity 0.85 so that they appear slowly on the map points  		  
+			    		pies.selectAll("path")
+							.transition()
+							.style("opacity", 0.85)
+							.duration(1500)
+						
+						//same with text
+						points.selectAll("text")
+							.transition()
+							.style("opacity", 0.85)
+							.duration(1500)
+	    	
+					});	//end of testpies csv
+					
+					//since we are inside the onclick zoom function, we need to enlarge the pie charts and the text(g2 all together)
+					g2.transition()
+					.duration(750)
+					.style("stroke-width", 1.5 / scale + "px")
+					.attr("transform", "translate(" + translate + ")scale(" + scale + ")");	    	
+				
+				}); //end of onclick function
+		
+		}); //end of json file load
+				
+		//we defined the pie chart creation on click but not on page load so we reload the pie chart csv file
+		d3.csv("testpies.csv" + '?' + Math.floor(Math.random()*1000), function(data) {
+			
+			//create the pies inside g2
+			var points = g2.selectAll("g")
+			.data(data)
+			.enter()
+			.append("g")
+			.attr("transform",function(d) { 
+				if(d.country != "United States") {
+					if(d.month == month()){ //check if the month is the selected one
+						d.PlantLongitude = parseFloat(d.PlantLongitude); //parsing into float from string is nescessary
+						d.PlantLatitude = parseFloat(d.PlantLatitude);
+						return "translate("+projection([d.PlantLongitude,d.PlantLatitude])+")" //project the pie on the right coordinates of the map			
+					}
+				}
+			})
+			.attr("class","pies")
+			
+			//create the text above the pie chart (with the plant name)
+			points.append("text")
+				.attr("y", -radius - 0.5)
+				.text(function(d) { return d.plant }) //return the plant name
+				.style('text-anchor','middle')
+				.attr("font-size", "1px")
+				.style("opacity", 0); //opacity 0 since we want it to transit slowly
+			
+			//create the arcs for each value of the pie chart	
+			var pies = points.selectAll(".pies")
+				.data(function(d) { return pie(d.value.split(['-'])); }) //split values on -
+				.enter()
+				.append('g')
+				.attr('class','arc');
+			
+			//create the pie chart path	
+			pies.append("path")
+			  .attr('d',arc)
+		      .attr("fill",function(d,i){ //color the specific area of the piechart according to the scale set
+		           return piecolor(i);     
+		      })
+		      .style("opacity", 0); //at first opacity 0 because we want it to transit
+		      
+		    //text labels inside the pie arcs
+			pies.append("text")
+		      .attr("transform", function(d) { 
+		    	  var _d = arc.centroid(d);
+		          _d[0] *= 1.1;	//multiply by a constant factor
+		          _d[1] *= 1.1;	//multiply by a constant factor
+		          return "translate(" + _d + ")";
+		          //return "translate(" + arc.centroid(d) + ")"; 
+		      })
+		      .attr("dy", "0.35em")
+		      .text(function(d) {
+		    	  if(d.value < 0.1){ //if the value is less than 0.1 don't set a label
+		    		  return " ";
+		    	  }else{
+		    		  d.value = d3.format(".1%")(d.value); //format the label into a single decimal digit % number		    		 
+		    		  return d.value;
+		    	  }
+		      })
+		      .attr("font-size", "0.4px");
+			
+			//select all the pies and transit them to opacity 0.85 so that they appear slowly on the map points    		  
+	    	pies.selectAll("path")
+					.transition()
+					.style("opacity", 0.85)
+					.duration(1500)
+			
+			//same for text
+			points.selectAll("text")
+					.transition()
+					.style("opacity", 0.85)
+					.duration(1500)
+	
+		});	//end of csv needed in order to create the pie chart
+	
+	}); //end of emission csv file
+		
+/*---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/			
+		
+	//since we zoom in onclick, we need a function to zoom out when a specific state is allready selected
+	function reset() {
+		  active.classed("active", false);
+		  active = d3.select(null);
+
+		 //delete all the existing pies
+		 var del = d3.selectAll(".pies")
+		 del = del.remove();
+		 
+		//return the g (path-map group) on it's original scale(unzoomed)
+		 g.transition()
+			  .duration(750)
+			  .style("stroke-width", "1.5px")
+			  .attr("transform", "");
+		
+		//since the pie charts are deleted we need to recreate them as they were on page load
+		//we 'll recreate them the same way, by reloading the pie chart csv file 
+		d3.csv("testpies.csv" + '?' + Math.floor(Math.random()*1000), function(data) {
+			
+			//create the pies inside g2
+			var points = g2.selectAll("g")
+			.data(data)
+			.enter()
+			.append("g")
+			.attr("transform",function(d) {
+				if(d.country != "United States") {
+					if(d.month == month()){  //check if the month is the selected one
+						d.PlantLongitude = parseFloat(d.PlantLongitude); //parsing into float from string is nescessary
+						d.PlantLatitude = parseFloat(d.PlantLatitude);
+						return "translate("+projection([d.PlantLongitude,d.PlantLatitude])+")" //project the pie on the right coordinates of the map
+					}
+				}							
+			})
+			.attr("class","pies")
+			
+			//create the text above the pie chart (with the plant name)
+			points.append("text")
+				.attr("y", -radius - 0.5)
+				.text(function(d) { return d.plant }) //return the name of the plant
+				.style('text-anchor','middle')
+				.attr("font-size", "1px")
+				.style("opacity", 0);
+			
+			//create the arcs for each value of the pie chart
+			var pies = points.selectAll(".pies")
+				.data(function(d) { return pie(d.value.split(['-'])); }) //split values on -
+				.enter()
+				.append('g')
+				.attr('class','arc');
+			
+			//create the pie chart path
+			pies.append("path")
+			  .attr('d',arc)
+		      .attr("fill",function(d,i){ //color the specific area of the piechart according to the scale set
+		           return piecolor(i);     
+		      })
+		      .style("opacity", 0); //at first opacity 0 because we want it to transit
+		      
+		    //text labels inside the pie arcs
+			pies.append("text")
+		      .attr("transform", function(d) { 
+		    	  var _d = arc.centroid(d);
+		          _d[0] *= 1.1;	//multiply by a constant factor
+		          _d[1] *= 1.1;	//multiply by a constant factor
+		          return "translate(" + _d + ")";
+		          //return "translate(" + arc.centroid(d) + ")"; 
+		      })
+		      .attr("dy", "0.35em")
+		      .text(function(d) {
+		    	  if(d.value < 0.1){ //if the value is less than 0.1 don't set a label
+		    		  return " ";
+		    	  }else{
+		    		  d.value = d3.format(".1%")(d.value); //format the label into a single decimal digit % number		    		 
+		    		  return d.value;
+		    	  }
+		      })
+		      .attr("font-size", "0.4px");
+			
+			//select all the pies and transit them to opacity 0.85 so that they appear slowly on the map points  		  
+    		pies.selectAll("path")
+				.transition()
+				.style("opacity", 0.85)
+				.duration(1500)
+				
+			points.selectAll("text")
+				.transition()
+				.style("opacity", 0.85)
+				.duration(1500)
+  	
+		});	//end of pie chart csv
+		
+		//select all the pies and transit them to opacity 0.85 so that they appear slowly on the map points
+		g2.transition()
+		  .duration(750)
+		  .style("stroke-width", "1.5px")
+		  .attr("transform", "");
+		
+	}; //end of reset function
+	
+/*---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/		
+	
+	//since the month has now changed we need to delete everything in the svg area and reacreate it with the data of the new month
+	function monthreset() {
+		
+		//delete all the pies and the paths-maps of the svg area
+		var rem = d3.selectAll(".pies")
+		    rem = rem.remove();
+		var rem2 = d3.selectAll("path")
+	    rem2 = rem2.remove();
+		
+		//get the value of the selected month
+		function month() {
+		    var id = document.getElementById("Selectmonth");
+		    var month = id.options[id.selectedIndex].text;
+		return month;
+		};
+		
+		console.log(month()); //log the chosen month
+		
+		//reload the excel dataset of emissions
+		d3.csv("test.csv" + '?' + Math.floor(Math.random()*1000), function(data) {
+
+			//Set input domain for color scale
+			color.domain([
+				d3.min(data, function(d) { return d.average; }), 
+				d3.max(data, function(d) { return d.average; })
+			]);
+			
+			
+			//reload the geojson file of countries in order to remake the map
+			d3.json("worldmap.json", function(json) {
+
+				//Merge the emission dataset and GeoJSON
+				
+				//Loop through once for each emission dataset value
+				for (var i = 0; i < data.length; i++) {
+					
+					//console.log(month()); check if month is selected properly
+					
+					if(month() == data[i].month) {
+						
+						//Grab country name
+						var datacountry = data[i].country;
+						
+						//Grab data value, and convert from string to float
+						var dataValue = parseFloat(data[i].value);
+						var dataAverage = parseFloat(data[i].average);
+				
+						//Find the corresponding country inside the GeoJSON
+						for (var j = 0; j < json.features.length; j++) {
+						
+							var jsoncountry = json.features[j].properties.name;
+							
+							if (datacountry == jsoncountry) {
+						
+								//Copy the data value into the JSON
+								json.features[j].properties.value = dataValue;
+								//A single value represents a single plant facility. A country can have multiple plants.
+								//That's why here we implement the average value for the country.
+								json.features[j].properties.average = dataAverage;
+								//Stop looking through the JSON
+								break;
+							}//end if
+						
+						} //end for loop
+					} //end if
+	
+				} //end for loop	
+			
+						
+					
+				//Bind data and create one path per GeoJSON feature
+				g.selectAll("path")
+				   .data(json.features)
+				   .enter()
+				   .append("path")
+				   .attr("d", path)
+				   .attr("class", "feature")
+				   .style("stroke", "DimGrey") //country border color and width
+				   .style("stroke-width", 0.15)
+				   .style("fill", function(d) { //choropleth filling					
+					var value = d.properties.value; //get data value
+					var average = d.properties.average; //get the average value from data					
+					//since we ave created a separate file for the US we don't need to color them
+					//we created a separate file because we had trouble zooming in (because of Alaska,Hawaii,etc.)
+					if(d.properties.name == "United States") { 
+						return "#ccc";
+					}else{
+						if (average) {
+							//If average value exists…
+							return color(average);
+						} else {
+							//If average value is undefined…
+							return "#ccc";
+						}
+					}
+					})
+				   .style("opacity", 0.8) //opacity 0.8 setup for the hovering effect
+				   .on("mouseover", function(d) {
+					d3.select(this)
+						.transition()
+						.duration(300)
+						.style("opacity", 1); //opacity 1 when hovering on top of a state
+					})
+					.on("mouseout", function() {
+					d3.select(this)
+						.transition()
+						.duration(300)
+						.style("opacity", 0.8) //opacity back to 0.8 when mouse stops targeting the specific state
+						
+					div.transition()
+						.duration(300)
+						.style("opacity", 0) //hiding the on-state tooltip on mouseout (not used here)
+					})
+					.on("click", function clicked(d) { //when a state is clicked the map is zoomed and the pie charts are enhanced
+					  if (active.node() === this) return reset(); //if the state is allready selected the unzoom
+					  active.classed("active", false);
+					  active = d3.select(this).classed("active", true);
+		
+					  var del = d3.selectAll(".pies") //delete all allready existing pies
+					  del = del.remove();
+		
+					  var bounds = path.bounds(d), //set the bounds for scale and translate
+						dx = bounds[1][0] - bounds[0][0],
+						dy = bounds[1][1] - bounds[0][1],
+						x = (bounds[0][0] + bounds[1][0]) / 2,
+						y = (bounds[0][1] + bounds[1][1]) / 2,
+						scale = .9 / Math.max(dx / w, dy / h),
+						translate = [w / 2 - scale * x, h / 2 - scale * y];
+		
+						g.transition() //transition the "path"-map group (zoom in)
+							.duration(750)
+							.style("stroke-width", 1.5 / scale + "px")
+							.attr("transform", "translate(" + translate + ")scale(" + scale + ")");								
+		
+						//load the appropriate csv file in order to create the pie charts again
+						d3.csv("testpies.csv" + '?' + Math.floor(Math.random()*1000), function(data) {
+							
+							//create the pies inside g2
+							var points = g2.selectAll("g")
+							.data(data)
+							.enter()
+							.append("g")
+							.attr("transform",function(d) {
+								if(d.country != "United States") {
+									if(d.month == month()){  //check if the month is the selected one
+										d.PlantLongitude = parseFloat(d.PlantLongitude); //parsing into float from string is nescessary
+										d.PlantLatitude = parseFloat(d.PlantLatitude);
+										return "translate("+projection([d.PlantLongitude,d.PlantLatitude])+")" //project the pie on the right coordinates of the map
+									}
+								}							
+							})
+							.attr("class","pies")
+							
+							//create the text above the pie chart (with the plant name)
+							points.append("text")
+								.attr("y", -radius - 0.5)
+								.text(function(d) { return d.plant })
+								.style('text-anchor','middle')
+								.attr("font-size", "1px")
+								.style("opacity", 0);
+							
+							//create the arcs for each value of the pie chart
+							var pies = points.selectAll(".pies")
+								.data(function(d) { return pie(d.value.split(['-'])); }) //split values on -
+								.enter()
+								.append('g')
+								.attr('class','arc');
+							
+							//create the pie chart path	
+							pies.append("path")
+							  .attr('d',arc)
+						      .attr("fill",function(d,i){ //color the specific area of the piechart according to the scale set
+						           return piecolor(i);     
+						      })
+						      .style("opacity", 0); //at first opacity 0 because we want it to transit
+							
+							//text labels inside the pie arcs
+							pies.append("text")
+						      .attr("transform", function(d) { 
+						    	  var _d = arc.centroid(d);
+						          _d[0] *= 1.1;	//multiply by a constant factor
+						          _d[1] *= 1.1;	//multiply by a constant factor
+						          return "translate(" + _d + ")";
+						          //return "translate(" + arc.centroid(d) + ")"; 
+						      })
+						      .attr("dy", "0.35em")
+						      .text(function(d) {
+						    	  if(d.value < 0.1){ //if the value is less than 0.1 don't set a label
+						    		  return " ";
+						    	  }else{
+						    		  d.value = d3.format(".1%")(d.value); //format the label into a single decimal digit % number							    		 
+						    		  return d.value;
+						    	  }
+						      })
+						      .attr("font-size", "0.4px");
+							
+							//select all the pies and transit them to opacity 0.85 so that they appear slowly on the map points   		  
+				    		pies.selectAll("path")
+								.transition()
+								.style("opacity", 0.85)
+								.duration(1500)
+							
+							//same with text
+							points.selectAll("text")
+								.transition()
+								.style("opacity", 0.85)
+								.duration(1500)
+		    	
+						});	//end of csv needed in order to create the pie chart
+						
+						//since we are inside the onclick zoom function, we need to enlarge the pie charts and the text(g2 all together)
+						g2.transition()
+						.duration(750)
+						.style("stroke-width", 1.5 / scale + "px")
+						.attr("transform", "translate(" + translate + ")scale(" + scale + ")");	    	
+				
+					}); //end of onclick function		
+			
+			}); //end of json file load
+				
+			//we defined the pie chart creation on click but not on page load so we reload the pie chart csv file
+			d3.csv("testpies.csv" + '?' + Math.floor(Math.random()*1000), function(data) {
+				
+				//create the pies inside g2
+				var points = g2.selectAll("g")
+				.data(data)
+				.enter()
+				.append("g")
+				.attr("transform",function(d) {
+					if(d.country != "United States") {
+						if(d.month == month()){  //check if the month is the selected one
+							d.PlantLongitude = parseFloat(d.PlantLongitude); //parsing into float from string is nescessary
+							d.PlantLatitude = parseFloat(d.PlantLatitude);
+							return "translate("+projection([d.PlantLongitude,d.PlantLatitude])+")" //project the pie on the right coordinates of the map
+						}
+					}							
+				})
+				.attr("class","pies")
+				
+				//create the text above the pie chart (with the plant name)
+				points.append("text")
+					.attr("y", -radius - 0.5)
+					.text(function(d) { return d.plant }) //return the plant name
+					.style('text-anchor','middle')
+					.attr("font-size", "1px")
+					.style("opacity", 0); //opacity 0 since we want it to transit slowly
+				
+				//create the arcs for each value of the pie chart
+				var pies = points.selectAll(".pies")
+					.data(function(d) { return pie(d.value.split(['-'])); }) //split values on -
+					.enter()
+					.append('g')
+					.attr('class','arc');
+					
+				//create the pie chart path	
+				pies.append("path")
+				  .attr('d',arc)
+			      .attr("fill",function(d,i){  //color the specific area of the piechart according to the scale set
+			           return piecolor(i);     
+			      })
+			      .style("opacity", 0);
+				
+				//text labels inside the pie arcs
+				pies.append("text")
+			      .attr("transform", function(d) { 
+			    	  var _d = arc.centroid(d);
+			          _d[0] *= 1.1;	//multiply by a constant factor
+			          _d[1] *= 1.1;	//multiply by a constant factor
+			          return "translate(" + _d + ")";
+			          //return "translate(" + arc.centroid(d) + ")"; 
+			      })
+			      .attr("dy", "0.35em")
+			      .text(function(d) {
+			    	  if(d.value < 0.1){ //if the value is less than 0.1 don't set a label
+			    		  return " ";
+			    	  }else{
+			    		  d.value = d3.format(".1%")(d.value); //format the label into a single decimal digit % number			    		 
+			    		  return d.value;
+			    	  }
+			      })
+			      .attr("font-size", "0.4px");
+				
+				//select all the pies and transit them to opacity 0.85 so that they appear slowly on the map points    		  
+	    		pies.selectAll("path")
+					.transition()
+					.style("opacity", 0.85)
+					.duration(1500)
+				
+				//same for text
+				points.selectAll("text")
+					.transition()
+					.style("opacity", 0.85)
+					.duration(1500)
+   	
+			});	//end of pie chart csv load
+
+			
+		}); //end of emmisions csv load
+		
+	}; //end of monthreset() function
+		
+/*---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+		
+	//Creation of choropleth's legend
+	
+	//initializing 2 arrays
+	
+	//legend_labels contains the label title values in string format
+	//(they must have the same number with the colors appearing in the choropleth) [ex.<50 , <100, etc.]
+	var legend_labels = ["value 1", "value 2", "value 3", "value 4", "value 5"];
+	
+	//ext_color_domain contains the values of the legends.
+	//They are set experimentally so that all the choropleth colors are present at the legend
+	var ext_color_domain = [0, 0.35, 0.55, 0.65, 1.00]; //peiramatika oi times wste na fainontai ola ta xrwmata tou choropleth
+	
+	//Adding the legend group (g3)
+	var legend = svg.selectAll("g.legend")
+	  .data(ext_color_domain)
+	  .enter().append("g")
+	  .attr("class", "legend");
+	
+	//setting width and height of legend rectangles
+	var ls_w = 20, ls_h = 20;
+	
+	//creating the legend rectangles inside the legend group set above
+	legend.append("rect")
+	  .attr("x", 50)
+	  .attr("y", function(d, i){ return h - (i*ls_h) - 2*ls_h - 100;}) //-100 for better vertical placement of the rectangles (height)
+	  .attr("width", ls_w)
+	  .attr("height", ls_h)
+	  //color is called in order to fill the rectangles by quantizing the values set
+		  //this wouldn't be nescessary if we had set standard color values for the choropleth at the start of the program
+	  .style("fill", function(d, i) { return color(d); }) //ama eixame settarei emeis tis katigories den tha xreiazotan i klisi tou color
+	  .style("opacity", 0.8);
+	
+	//creating the legend text (next to the rectangles created above)
+	legend.append("text")
+	  .attr("x", 80)
+	  .attr("y", function(d, i){ return h - (i*ls_h) - ls_h - 4 - 100;}) //-100 for better vertical placement of the label text (height)
+	  .text(function(d, i){ return legend_labels[i]; });
+
+	</script>
+	
+	<noscript>Sorry, your browser does not support JavaScript!
+	<br>You can enable it by clicking<a href="http://www.enable-javascript.com/">here</a>!
+	</noscript>
+</body>
+</html>
