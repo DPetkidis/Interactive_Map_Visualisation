@@ -56,6 +56,14 @@ A short list of the d3 functions used is presented below. In the table section â
 
 ----------
 
+### Further notes
+
+The csv files and the json files can be modified according to your needs. You can modify the map borders, change the variable names and add more values. 
+The colors and the legend can also be modified to serve different purposes.
+The website can be modified to be more responsive
+
+----------
+
 ### ![](https://cdn0.iconfinder.com/data/icons/simple-darkcon-1/99/book-24.png) License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
